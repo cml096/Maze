@@ -12,6 +12,9 @@ class Maze {
     this.rows = rows;
     this.grid = [];
     this.stack = [];
+
+    this.colInit = 0;
+    this.rowInit = 0;
     }
 
     // Set the grid: Create new this.grid array based on number of instance rows and columns
@@ -41,7 +44,7 @@ class Maze {
         for (let c = 0; c < this.columns; c++) {
         let grid = this.grid;
         let num = Math.floor(Math.random() * 100);
-        grid[r][c].flat = num > 67 ? false : true;
+        grid[r][c].flat = num > 67 ? 1 : 0.84;
         grid[r][c].show(this.size, this.rows, this.columns, num);
         }
     }
@@ -69,9 +72,12 @@ class Maze {
         let rand_x = Math.floor(Math.random() * this.columns);
         let rand_y = Math.floor(Math.random() * this.rows);
         // set init
-        console.log(rand_x, rand_y);
+        console.log(rand_x,rand_y);
+        // save init in current variable
         current = this.grid[rand_x][rand_y];
-        console.log(current);
+        this.colInit = rand_x;
+        this.rowInit = rand_y;
+        // mark the init
         this.grid[rand_x][rand_y].init = true;
         this.grid[rand_x][rand_y].setConfig(this.columns,this.rows,rand_x,rand_y,"purple");
         // set target
@@ -86,7 +92,7 @@ class Maze {
     window.requestAnimationFrame(() => {
         this.draw();
     });
-    }
+  }
 }
 
 class Cell {
@@ -103,7 +109,8 @@ class Cell {
       };
       this.init = false;
       this.target = false;
-      this.flat = false;
+      this.flat = 0;
+      this.spiritVisited = false;
       // parentGrid is passed in to enable the checkneighbours method.
       // parentSize is passed in to set the size of each cell on the grid
       this.parentGrid = parentGrid;
@@ -222,15 +229,277 @@ class Cell {
     }
 }
 
+class Spirit {
+  constructor(){
+    this.move = {
+      norte : false,
+      sur : false,
+      este : true,
+      oeste : false,
+    };
+  }
+
+  // this function returns the position where the "spirit" is pointer
+  getDirection(){
+    switch (true){
+      case this.move.norte:
+        return 'n';
+      case this.move.sur:
+        return 's';
+      case this.move.este:
+        return 'e';
+      case this.move.oeste:
+        return 'o';
+    }
+  }
+
+  // rotate the pointer counterclockwise and change the direction where it is pointing 
+  rotartePointer(){
+    switch(this.getDirection()){
+      case 'n':
+        this.move.norte = false;
+        this.move.oeste = true;
+        break;
+      case 's':
+        this.move.sur = false;
+        this.move.este = true;
+        break;
+      case 'e':
+        this.move.este = false;
+        this.move.norte = true;
+        break;
+      case 'o':
+        this.move.oeste = false;
+        this.move.sur = true;
+        break;
+    }
+  }
+
+  rotate(time){
+    let n = time / 4;
+    for (let i; i <= n; i++){
+      this.rotartePointer();
+    }
+  }
+}
+
+class Node {
+  constructor(timeRotation,totalTime,colNum,rowNum){
+    this.timeRotation = 0;
+    this.totalTime = 0;
+    this.colNum = 0;
+    this.rowNum = 0;
+  }
+}
+
+async function game(){
+  let newMaze = new Maze(600, 10, 10); 
+  newMaze.setup();
+  await newMaze.draw();
+  return newMaze;
+}
+
 function init(){
 
-    console.log('work!');
+  console.log('work!');
 
-    let newMaze = new Maze(600, 20, 20); 
-    newMaze.setup();
-    newMaze.draw();
-    return newMaze;
+  let newMaze = game();
 
+  console.log(newMaze.colInit,newMaze.rowInit);
+  console.log(newMaze.grid);
+
+  generationComplete = false;
+  let stack = [];
+  let spirit = new Spirit();
+  let node;
+
+  while(!generationComplete){
+    // mark path
+    newMaze[current.rowNum][current.colNum].spiritVisited = true;
+    // get direction of our punter
+    let dir = spirit.getDirection();
+    // We insert in the stack all the possible paths that "spirit" has
+    if(!current.walls.topWall && !current.spiritVisited){
+        switch(dir){
+          case 'n':
+            node = new Node(
+              0,
+              newMaze[current.rowNum - 1][current.colNum].flat + 0,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'o':
+            node = new Node(
+              12,
+              newMaze[current.rowNum][current.colNum + 1].flat + 12,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 's':
+            node = new Node(
+              8,
+              newMaze[current.rowNum + 1][current.colNum].flat + 8,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'e':
+            node = new Node(
+              4,
+              newMaze[current.rowNum][current.colNum - 1].flat + 4,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+        }
+    }
+    if(!current.walls.rightWall && !current.spiritVisited){
+        switch(dir){
+          case 'n':
+            node = new Node(
+              4,
+              newMaze[current.rowNum - 1][current.colNum].flat + 4,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'o':
+            node = new Node(
+              8,
+              newMaze[current.rowNum][current.colNum + 1].flat + 18,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 's':
+            node = new Node(
+              12,
+              newMaze[current.rowNum + 1][current.colNum].flat + 12,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'e':
+            node = new Node(
+              0,
+              newMaze[current.rowNum][current.colNum - 1].flat + 0,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+        }
+        
+    }
+    if(!current.walls.bottomWall && !current.spiritVisited){
+        switch(dir){
+          case 'n':
+            node = new Node(
+              8,
+              newMaze[current.rowNum - 1][current.colNum].flat + 8,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'o':
+            node = new Node(
+              4,
+              newMaze[current.rowNum][current.colNum + 1].flat + 4,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 's':
+            node = new Node(
+              0,
+              newMaze[current.rowNum + 1][current.colNum].flat + 0,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'e':
+            node = new Node(
+              12,
+              newMaze[current.rowNum][current.colNum - 1].flat + 12,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+        }
+    }
+    if(!current.walls.leftWall && !current.spiritVisited){
+        switch(dir){
+          case 'n':
+            node = new Node(
+              12,
+              newMaze[current.rowNum - 1][current.colNum].flat + 12,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'o':
+            node = new Node(
+              0,
+              newMaze[current.rowNum][current.colNum + 1].flat + 0,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 's':
+            node = new Node(
+              4,
+              newMaze[current.rowNum + 1][current.colNum].flat + 4,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+          case 'e':
+            node = new Node(
+              8,
+              newMaze[current.rowNum][current.colNum - 1].flat + 8,
+              current.rowNum,
+              current.colNum
+            );
+            stack.push(node);
+            break;
+        }
+    }
+    console.log(stack);
+    //sort the stack
+    stack.sort( (node_a, node_b) => (node_a.totalTime > node_b.totalTime) ? 1 : -1 );
+    //pop
+    let path = stack.pop();
+    // rotate current
+    spirit.rotate(path.timeRotation);
+    //upddate current
+    current = newMaze[path.rowNum][path.colNum];
+    // paint the area where i move
+    newMaze[current.rowNum][current.colNum].setConfig(
+      newMaze.columns,
+      newMaze.rows,
+      "purple"
+    );
+    // if ending
+    if(current.target){
+      generationComplete = true;
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
